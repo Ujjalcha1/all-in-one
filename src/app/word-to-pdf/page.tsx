@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { ToolLayout } from "@/components/tool-layout";
 import { FileUploader } from "@/components/file-uploader";
 import { ResultScreen } from "@/components/result-screen";
@@ -19,55 +18,27 @@ export default function WordToPdfPage() {
     if (!file) return;
     setIsProcessing(true);
     try {
-      const mammoth = await import("mammoth");
-      const ab = await file.arrayBuffer();
-      const result = await mammoth.extractRawText({ arrayBuffer: ab });
-      const text = result.value;
+      const formData = new FormData();
+      formData.append("file", file);
 
-      const pdfDoc = await PDFDocument.create();
-      const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-      const fontSize = 12;
-      const margin = 50;
-      const lineHeight = fontSize * 1.4;
-      const pageWidth = 595;
-      const pageHeight = 842;
-      const maxWidth = pageWidth - margin * 2;
+      const response = await fetch("/api/word-to-pdf", {
+        method: "POST",
+        body: formData,
+      });
 
-      const lines: string[] = [];
-      for (const paragraph of text.split("\n")) {
-        if (!paragraph.trim()) { lines.push(""); continue; }
-        const words = paragraph.split(" ");
-        let currentLine = "";
-        for (const word of words) {
-          const testLine = currentLine ? `${currentLine} ${word}` : word;
-          if (font.widthOfTextAtSize(testLine, fontSize) > maxWidth) {
-            lines.push(currentLine);
-            currentLine = word;
-          } else {
-            currentLine = testLine;
-          }
-        }
-        if (currentLine) lines.push(currentLine);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || errorData.details || `Conversion failed with status ${response.status}`);
       }
 
-      let page = pdfDoc.addPage([pageWidth, pageHeight]);
-      let y = pageHeight - margin;
-
-      for (const line of lines) {
-        if (y < margin + lineHeight) {
-          page = pdfDoc.addPage([pageWidth, pageHeight]);
-          y = pageHeight - margin;
-        }
-        if (line) {
-          page.drawText(line, { x: margin, y, size: fontSize, font, color: rgb(0, 0, 0) });
-        }
-        y -= lineHeight;
-      }
-
-      const pdfBytes = await pdfDoc.save();
-      setResultUrl(URL.createObjectURL(new Blob([pdfBytes as unknown as BlobPart], { type: "application/pdf" })));
-    } catch (e) { console.error(e); alert("Error converting Word to PDF."); }
-    finally { setIsProcessing(false); }
+      const blob = await response.blob();
+      setResultUrl(URL.createObjectURL(blob));
+    } catch (e: any) {
+      console.error(e);
+      alert(e.message || "Error converting Word to PDF.");
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -90,7 +61,7 @@ export default function WordToPdfPage() {
         <ResultScreen
           title="Converted to PDF!"
           downloadUrl={resultUrl}
-          downloadFileName={`${file?.name.replace(/\.(docx?)/i, '')}_result.docx`}
+          downloadFileName={`${file?.name.replace(/\.(docx?)/i, '')}_result.pdf`}
           downloadText="Download PDF"
           onStartOver={() => { setFile(null); setResultUrl(null); }}
         />

@@ -20,112 +20,76 @@ import {
   Trash2
 } from "lucide-react";
 
-// Simple client-side translation dictionary for realistic translation demos
-const mockTranslate = (text: string, targetLang: string) => {
-  const dicts: Record<string, Record<string, string>> = {
-    Spanish: {
-      "pdf": "PDF",
-      "document": "documento",
-      "tool": "herramienta",
-      "original": "original",
-      "layout": "diseño",
-      "text": "texto",
-      "the": "el",
-      "and": "y",
-      "is": "es",
-      "to": "a",
-      "for": "para",
-      "with": "con",
-      "file": "archivo",
-      "hello": "hola",
-      "world": "mundo",
-      "page": "página",
-      "accuracy": "precisión",
-      "translation": "traducción",
-      "merge": "fusionar",
-      "split": "dividir",
-      "compress": "comprimir",
-      "edit": "editar",
-      "convert": "convertir",
-      "free": "gratis",
-      "online": "en línea",
-      "secure": "seguro",
-      "sign": "firmar",
-      "unlock": "desbloquear",
-      "protect": "proteger",
-      "watermark": "marca de agua"
-    },
-    French: {
-      "pdf": "PDF",
-      "document": "document",
-      "tool": "outil",
-      "original": "original",
-      "layout": "mise en page",
-      "text": "texte",
-      "the": "le",
-      "and": "et",
-      "is": "est",
-      "to": "à",
-      "for": "pour",
-      "with": "avec",
-      "file": "fichier",
-      "hello": "bonjour",
-      "world": "monde",
-      "page": "page",
-      "accuracy": "précision",
-      "translation": "traduction",
-      "merge": "fusionner",
-      "split": "diviser",
-      "compress": "compresser",
-      "edit": "modifier",
-      "convert": "convertir",
-      "free": "gratuit",
-      "online": "en ligne",
-      "secure": "sécurisé",
-      "sign": "signer",
-      "unlock": "déverrouiller",
-      "protect": "protéger"
-    },
-    German: {
-      "pdf": "PDF",
-      "document": "Dokument",
-      "tool": "Werkzeug",
-      "original": "original",
-      "layout": "Layout",
-      "text": "Text",
-      "the": "das",
-      "and": "und",
-      "is": "ist",
-      "to": "zu",
-      "for": "für",
-      "with": "mit",
-      "file": "Datei",
-      "hello": "hallo",
-      "world": "Welt",
-      "page": "Seite",
-      "accuracy": "Genauigkeit",
-      "translation": "Übersetzung",
-      "free": "kostenlos",
-      "online": "online"
-    }
+// Real translation using MyMemory API with chunking for large text segments
+const translateText = async (text: string, fromLang: string, toLang: string): Promise<string> => {
+  const langCodes: Record<string, string> = {
+    English: "en",
+    Spanish: "es",
+    French: "fr",
+    German: "de",
+    Italian: "it",
+    Portuguese: "pt",
+    Chinese: "zh",
+    Japanese: "ja",
+    Korean: "ko",
+    Arabic: "ar",
+    Hindi: "hi",
+    Russian: "ru",
+    Dutch: "nl"
   };
 
-  const dict = dicts[targetLang] || dicts["Spanish"];
-  return text
-    .split(/\b/)
-    .map(word => {
-      const lower = word.toLowerCase();
-      if (dict[lower]) {
-        const trans = dict[lower];
-        // Match capitalization
-        if (word[0] === word[0].toUpperCase()) {
-          return trans[0].toUpperCase() + trans.slice(1);
-        }
-        return trans;
+  const fromCode = langCodes[fromLang] || "en";
+  const toCode = langCodes[toLang] || "es";
+
+  if (fromCode === toCode) return text;
+
+  // Split text into paragraphs to respect MyMemory length limit
+  const paragraphs = text.split("\n");
+  const translatedParagraphs: string[] = [];
+
+  for (const para of paragraphs) {
+    if (!para.trim()) {
+      translatedParagraphs.push("");
+      continue;
+    }
+
+    // Split paragraphs into sentence chunks under 400 characters
+    const chunks: string[] = [];
+    let currentChunk = "";
+    const sentences = para.match(/[^.!?]+[.!?]+(\s|$)|[^.!?]+$/g) || [para];
+
+    for (const sentence of sentences) {
+      if ((currentChunk + sentence).length > 400) {
+        if (currentChunk) chunks.push(currentChunk);
+        currentChunk = sentence;
+      } else {
+        currentChunk += sentence;
       }
-      return word;
-    })
-    .join("");
+    }
+    if (currentChunk) chunks.push(currentChunk);
+
+    const translatedChunks: string[] = [];
+    for (const chunk of chunks) {
+      try {
+        const res = await fetch(
+          `https://api.mymemory.translated.net/get?q=${encodeURIComponent(chunk.trim())}&langpair=${fromCode}|${toCode}`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          if (data.responseData && data.responseData.translatedText) {
+            translatedChunks.push(data.responseData.translatedText);
+            continue;
+          }
+        }
+      } catch (err) {
+        console.warn("MyMemory Translation API error, falling back:", err);
+      }
+      translatedChunks.push(chunk);
+    }
+    translatedParagraphs.push(translatedChunks.join(" "));
+  }
+
+  return translatedParagraphs.join("\n");
 };
 
 export default function TranslatePDFPage() {
@@ -239,7 +203,7 @@ export default function TranslatePDFPage() {
       }
 
       // 4. Translate text contents
-      const translatedText = mockTranslate(textLines.join("\n"), toLang);
+      const translatedText = await translateText(textLines.join("\n"), fromLang, toLang);
 
       // 5. Generate target PDF containing translated text using pdf-lib
       const { PDFDocument, rgb, StandardFonts } = await import("pdf-lib");

@@ -49,7 +49,6 @@ export const categories = [
     name: "Edit & Security",
     icon: Edit3,
     tools: [
-      { id: "edit-pdf", name: "Edit PDF", icon: Edit3, desc: "Add text, shapes, or notes to PDF." },
       { id: "sign-pdf", name: "Sign PDF", icon: PenTool, desc: "Sign documents with your signature." },
       { id: "watermark", name: "Watermark PDF", icon: Droplet, desc: "Stamp watermarks onto your PDF." },
       { id: "unlock-pdf", name: "Unlock PDF", icon: Unlock, desc: "Remove passwords from PDFs." },

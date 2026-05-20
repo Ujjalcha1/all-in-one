@@ -42,7 +42,7 @@ export default function SignPDFPage() {
 
   // Wizard Flow States
   const [wizardStep, setWizardStep] = useState<"upload" | "choice" | "details" | "request" | "editor">("upload");
-  const [signName, setSignName] = useState("ujjal");
+  const [signName, setSignName] = useState("");
   const [signInitials, setSignInitials] = useState("U");
   const [activeTab, setActiveTab] = useState<"signature" | "initials" | "stamp">("signature");
   const [selectedStyleIndex, setSelectedStyleIndex] = useState(0);
@@ -59,7 +59,7 @@ export default function SignPDFPage() {
         const page = await pdfDocInstance.getPage(activePage);
         // Render at crisp retina 1.5x resolution scale
         const viewport = page.getViewport({ scale: 1.5 });
-        
+
         const canvas = canvasRef.current;
         if (canvas) {
           canvas.width = viewport.width;
@@ -168,19 +168,19 @@ export default function SignPDFPage() {
   const handleFieldMouseDown = (e: React.MouseEvent, fieldId: string) => {
     e.stopPropagation();
     setSelectedFieldId(fieldId);
-    
+
     const field = placedFields.find(t => t.id === fieldId);
     if (!field) return;
 
     const overlay = e.currentTarget.parentElement;
     if (!overlay) return;
-    
+
     const rect = overlay.getBoundingClientRect();
 
     const handleMouseMove = (moveEvent: MouseEvent) => {
       const x = ((moveEvent.clientX - rect.left) / rect.width) * 100;
       const y = ((moveEvent.clientY - rect.top) / rect.height) * 100;
-      
+
       setPlacedFields(prev => prev.map(f => f.id === fieldId ? {
         ...f,
         x: Math.max(0, Math.min(100 - (f.width / rect.width * 100), x)),
@@ -218,11 +218,11 @@ export default function SignPDFPage() {
       ctx.fillStyle = signatureColor;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      
+
       const selectedFont = isInit ? "'Alex Brush', cursive" : signatureFonts[selectedStyleIndex].fontFamily;
       ctx.font = `italic 56px ${selectedFont}`;
       ctx.fillText(text || "Signature", 200, 60);
-      
+
       return canvas.toDataURL("image/png");
     }
     return "";
@@ -257,7 +257,7 @@ export default function SignPDFPage() {
         if (!page) continue;
 
         const { width, height } = page.getSize();
-        
+
         // Physical coordinates on vector PDF grid (bottom-up system)
         // Convert screen pixel bounds (based on 480px reference grid) to precise page percentages
         const fieldWidth = (field.width / 480) * width;
@@ -345,7 +345,7 @@ export default function SignPDFPage() {
             <h2 className="text-3xl font-black text-zinc-900 dark:text-white tracking-tight mb-8">
               Who will sign this document?
             </h2>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
               {/* Only me */}
               <div className="bg-zinc-50 dark:bg-zinc-900/50 p-6 rounded-2xl border border-zinc-100 dark:border-zinc-800 flex flex-col items-center justify-between text-center gap-6">
@@ -354,7 +354,7 @@ export default function SignPDFPage() {
                   <PenTool className="w-16 h-16 text-blue-600 animate-pulse" />
                 </div>
                 <div className="space-y-2">
-                  <Button 
+                  <Button
                     onClick={() => setWizardStep("details")}
                     className="bg-red-500 hover:bg-red-600 text-white font-extrabold px-10 py-3 rounded-xl text-base shadow-lg shadow-red-500/20"
                   >
@@ -370,7 +370,7 @@ export default function SignPDFPage() {
                   <Users className="w-16 h-16 text-emerald-600" />
                 </div>
                 <div className="space-y-2">
-                  <Button 
+                  <Button
                     onClick={() => setWizardStep("request")}
                     className="bg-red-500 hover:bg-red-600 text-white font-extrabold px-10 py-3 rounded-xl text-base shadow-lg shadow-red-500/20"
                   >
@@ -404,21 +404,21 @@ export default function SignPDFPage() {
             <div className="grid grid-cols-3 gap-6">
               <div className="col-span-2 space-y-1.5">
                 <label className="text-xs font-extrabold text-muted-foreground uppercase tracking-wide">Full name:</label>
-                <input 
-                  type="text" 
-                  value={signName} 
-                  onChange={(e) => setSignName(e.target.value)} 
-                  placeholder="Your name" 
+                <input
+                  type="text"
+                  value={signName}
+                  onChange={(e) => setSignName(e.target.value)}
+                  placeholder="Your name"
                   className="w-full h-11 px-4 rounded-xl border bg-zinc-50 dark:bg-black/20 focus:outline-none focus:ring-2 focus:ring-red-500/40 font-bold"
                 />
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-extrabold text-muted-foreground uppercase tracking-wide">Initials:</label>
-                <input 
-                  type="text" 
-                  value={signInitials} 
-                  onChange={(e) => setSignInitials(e.target.value)} 
-                  placeholder="Initials" 
+                <input
+                  type="text"
+                  value={signInitials}
+                  onChange={(e) => setSignInitials(e.target.value)}
+                  placeholder="Initials"
                   className="w-full h-11 px-4 rounded-xl border bg-zinc-50 dark:bg-black/20 focus:outline-none focus:ring-2 focus:ring-red-500/40 font-bold"
                 />
               </div>
@@ -426,27 +426,24 @@ export default function SignPDFPage() {
 
             {/* Signature Tab Navigation */}
             <div className="border-b flex gap-6">
-              <button 
+              <button
                 onClick={() => setActiveTab("signature")}
-                className={`pb-3 font-extrabold text-sm flex items-center gap-2 border-b-2 transition-all ${
-                  activeTab === "signature" ? "border-red-500 text-red-500" : "border-transparent text-muted-foreground"
-                }`}
+                className={`pb-3 font-extrabold text-sm flex items-center gap-2 border-b-2 transition-all ${activeTab === "signature" ? "border-red-500 text-red-500" : "border-transparent text-muted-foreground"
+                  }`}
               >
                 <PenTool className="w-4 h-4" /> Signature
               </button>
-              <button 
+              <button
                 onClick={() => setActiveTab("initials")}
-                className={`pb-3 font-extrabold text-sm flex items-center gap-2 border-b-2 transition-all ${
-                  activeTab === "initials" ? "border-red-500 text-red-500" : "border-transparent text-muted-foreground"
-                }`}
+                className={`pb-3 font-extrabold text-sm flex items-center gap-2 border-b-2 transition-all ${activeTab === "initials" ? "border-red-500 text-red-500" : "border-transparent text-muted-foreground"
+                  }`}
               >
                 Initials
               </button>
-              <button 
+              <button
                 onClick={() => setActiveTab("stamp")}
-                className={`pb-3 font-extrabold text-sm flex items-center gap-2 border-b-2 transition-all ${
-                  activeTab === "stamp" ? "border-red-500 text-red-500" : "border-transparent text-muted-foreground"
-                }`}
+                className={`pb-3 font-extrabold text-sm flex items-center gap-2 border-b-2 transition-all ${activeTab === "stamp" ? "border-red-500 text-red-500" : "border-transparent text-muted-foreground"
+                  }`}
               >
                 Company Stamp
               </button>
@@ -457,18 +454,17 @@ export default function SignPDFPage() {
                 {/* Dynamically Styled cursive list */}
                 <div className="border rounded-2xl divide-y overflow-hidden max-h-56 overflow-y-auto">
                   {signatureFonts.map((style, idx) => (
-                    <div 
+                    <div
                       key={idx}
                       onClick={() => setSelectedStyleIndex(idx)}
-                      className={`flex items-center gap-4 px-5 py-4 cursor-pointer transition-all ${
-                        selectedStyleIndex === idx ? "bg-red-500/5" : "hover:bg-zinc-50 dark:hover:bg-zinc-900/40"
-                      }`}
+                      className={`flex items-center gap-4 px-5 py-4 cursor-pointer transition-all ${selectedStyleIndex === idx ? "bg-red-500/5" : "hover:bg-zinc-50 dark:hover:bg-zinc-900/40"
+                        }`}
                     >
                       <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${selectedStyleIndex === idx ? "border-red-500" : "border-zinc-300"}`}>
                         {selectedStyleIndex === idx && <div className="w-2.5 h-2.5 bg-red-500 rounded-full" />}
                       </div>
-                      <span 
-                        style={{ fontFamily: style.fontFamily, color: signatureColor }} 
+                      <span
+                        style={{ fontFamily: style.fontFamily, color: signatureColor }}
                         className="text-3xl tracking-wide select-none"
                       >
                         {signName || "Signature"}
@@ -486,9 +482,8 @@ export default function SignPDFPage() {
                         key={c}
                         onClick={() => setSignatureColor(c)}
                         style={{ backgroundColor: c }}
-                        className={`w-6 h-6 rounded-full border-2 shadow-sm transition-all ${
-                          signatureColor === c ? "border-red-500 scale-110" : "border-transparent hover:scale-105"
-                        }`}
+                        className={`w-6 h-6 rounded-full border-2 shadow-sm transition-all ${signatureColor === c ? "border-red-500 scale-110" : "border-transparent hover:scale-105"
+                          }`}
                       />
                     ))}
                   </div>
@@ -499,8 +494,8 @@ export default function SignPDFPage() {
             {activeTab === "initials" && (
               <div className="p-8 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border text-center space-y-4">
                 <p className="text-xs font-semibold text-muted-foreground uppercase">Calligraphy Preview</p>
-                <div 
-                  style={{ fontFamily: "'Alex Brush', cursive", color: signatureColor }} 
+                <div
+                  style={{ fontFamily: "'Alex Brush', cursive", color: signatureColor }}
                   className="text-6xl py-4 select-none"
                 >
                   {signInitials || "I"}
@@ -513,16 +508,16 @@ export default function SignPDFPage() {
                 <p className="text-xs font-semibold text-muted-foreground uppercase">Upload Company Stamp</p>
                 {stampImgUrl ? (
                   <div className="space-y-3">
-                    <img 
-                      src={stampImgUrl} 
-                      alt="Uploaded Stamp" 
+                    <img
+                      src={stampImgUrl}
+                      alt="Uploaded Stamp"
                       className="w-36 h-24 object-contain mx-auto border rounded-xl bg-white shadow"
                     />
                     <div className="flex justify-center gap-2">
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        onClick={() => setStampImgUrl(null)} 
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setStampImgUrl(null)}
                         className="text-red-500 hover:text-red-600 text-xs font-bold"
                       >
                         Remove Stamp
@@ -533,9 +528,9 @@ export default function SignPDFPage() {
                   <label className="w-36 h-24 bg-white dark:bg-zinc-950 border border-zinc-200 border-dashed rounded-xl mx-auto flex flex-col items-center justify-center text-[10px] font-black text-muted-foreground gap-1.5 shadow-inner cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-900">
                     <Printer className="w-6 h-6 text-zinc-400" />
                     CLICK TO UPLOAD
-                    <input 
-                      type="file" 
-                      accept="image/*" 
+                    <input
+                      type="file"
+                      accept="image/*"
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) {
@@ -553,14 +548,14 @@ export default function SignPDFPage() {
           </div>
 
           <div className="p-6 border-t border-zinc-100 dark:border-zinc-800 flex justify-end gap-3">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setWizardStep("choice")}
               className="font-extrabold px-6 rounded-xl"
             >
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={handleApplyDetails}
               className="bg-red-500 hover:bg-red-600 text-white font-extrabold px-8 rounded-xl"
             >
@@ -584,21 +579,21 @@ export default function SignPDFPage() {
           <div className="p-6 space-y-6">
             <div className="space-y-4">
               <label className="text-xs font-extrabold text-muted-foreground uppercase tracking-wide block">Who will receive your document?</label>
-              
+
               {receivers.map((r, index) => (
                 <div key={r.id} className="flex flex-wrap md:flex-nowrap gap-3 items-center bg-zinc-50 dark:bg-zinc-900/50 p-4 rounded-xl border">
                   <GripVertical className="w-5 h-5 text-zinc-400 cursor-grab" />
                   <div className="w-5 h-5 rounded-full bg-red-100 text-red-600 text-[10px] font-bold flex items-center justify-center">
                     {index + 1}
                   </div>
-                  <input 
-                    type="text" 
-                    placeholder="Name" 
+                  <input
+                    type="text"
+                    placeholder="Name"
                     className="h-10 px-3.5 border rounded-lg flex-1 bg-white dark:bg-zinc-950 text-sm font-semibold"
                   />
-                  <input 
-                    type="email" 
-                    placeholder="Email" 
+                  <input
+                    type="email"
+                    placeholder="Email"
                     className="h-10 px-3.5 border rounded-lg flex-1 bg-white dark:bg-zinc-950 text-sm font-semibold"
                   />
                   <select className="h-10 px-2.5 border rounded-lg text-xs font-bold bg-white dark:bg-zinc-950">
@@ -608,7 +603,7 @@ export default function SignPDFPage() {
                 </div>
               ))}
 
-              <Button 
+              <Button
                 onClick={addReceiver}
                 variant="outline"
                 className="w-full border-dashed border-red-500/30 text-red-500 hover:bg-red-500/5 font-extrabold h-11 rounded-xl"
@@ -640,14 +635,14 @@ export default function SignPDFPage() {
           </div>
 
           <div className="p-6 border-t border-zinc-100 dark:border-zinc-800 flex justify-end gap-3">
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               onClick={() => setWizardStep("choice")}
               className="font-extrabold text-red-500 hover:text-red-600 hover:bg-red-500/5 px-6 rounded-xl"
             >
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={handleApplyDetails}
               className="bg-red-500 hover:bg-red-600 text-white font-extrabold px-8 rounded-xl"
             >
@@ -663,25 +658,24 @@ export default function SignPDFPage() {
   if (wizardStep === "editor" && file) {
     return (
       <div className="flex flex-col lg:flex-row w-full h-[calc(100vh-4rem)] overflow-hidden bg-[#f3f4f6] dark:bg-zinc-900">
-        
+
         {/* Left Area: Page list Thumbnail strip sidebar */}
         <div className="w-full lg:w-[200px] border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex flex-col p-4 gap-4 overflow-y-auto max-h-[25vh] lg:max-h-none">
           <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider block border-b pb-2">Document Pages</span>
-          
+
           <div className="flex lg:flex-col gap-4">
             {thumbnails.map((url, idx) => (
-              <div 
+              <div
                 key={idx}
                 onClick={() => setActivePage(idx + 1)}
-                className={`cursor-pointer group flex flex-col items-center gap-1.5 p-2 rounded-xl border transition-all ${
-                  activePage === idx + 1 
-                    ? "border-red-500 bg-red-500/5 ring-1 ring-red-500/20" 
+                className={`cursor-pointer group flex flex-col items-center gap-1.5 p-2 rounded-xl border transition-all ${activePage === idx + 1
+                    ? "border-red-500 bg-red-500/5 ring-1 ring-red-500/20"
                     : "border-zinc-100 dark:border-zinc-800 hover:border-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-900/40"
-                }`}
+                  }`}
               >
-                <img 
-                  src={url} 
-                  alt={`Page ${idx + 1}`} 
+                <img
+                  src={url}
+                  alt={`Page ${idx + 1}`}
                   className="rounded border shadow-sm max-h-[120px] object-contain pointer-events-none group-hover:scale-[1.01] transition-transform"
                 />
                 <span className="text-[10px] font-black text-muted-foreground">
@@ -693,7 +687,7 @@ export default function SignPDFPage() {
         </div>
 
         {/* Center Area: PDF Page Canvas with Drag and Drop layers */}
-        <div 
+        <div
           onClick={() => setSelectedFieldId(null)}
           className="flex-1 flex items-center justify-center p-8 relative overflow-y-auto min-h-[50vh] lg:min-h-0 cursor-default"
         >
@@ -707,8 +701,8 @@ export default function SignPDFPage() {
               {/* Cover dynamic sizing page renderer */}
               <div className="relative overflow-hidden select-none">
                 <div className="relative">
-                  <canvas 
-                    ref={canvasRef} 
+                  <canvas
+                    ref={canvasRef}
                     className="w-full max-w-[480px] h-auto object-contain rounded-lg border shadow-inner bg-white pointer-events-none"
                   />
                   {isRenderingPage && (
@@ -727,11 +721,10 @@ export default function SignPDFPage() {
                         key={field.id}
                         onMouseDown={(e) => handleFieldMouseDown(e, field.id)}
                         onClick={(e) => { e.stopPropagation(); setSelectedFieldId(field.id); }}
-                        className={`absolute px-3.5 py-2.5 rounded-xl border-2 flex items-center justify-center cursor-move transition-all ${
-                          selectedFieldId === field.id 
-                            ? "border-red-500 bg-red-500/5 shadow-lg shadow-red-500/10 z-40" 
+                        className={`absolute px-3.5 py-2.5 rounded-xl border-2 flex items-center justify-center cursor-move transition-all ${selectedFieldId === field.id
+                            ? "border-red-500 bg-red-500/5 shadow-lg shadow-red-500/10 z-40"
                             : "border-zinc-400 border-dashed bg-white/75 dark:bg-zinc-950/75 hover:border-zinc-600"
-                        }`}
+                          }`}
                         style={{
                           left: `${field.x}%`,
                           top: `${field.y}%`,
@@ -752,7 +745,7 @@ export default function SignPDFPage() {
                         )}
 
                         {field.type === "signature" && (
-                          <span 
+                          <span
                             style={{ fontFamily: signatureFonts[selectedStyleIndex].fontFamily, color: signatureColor }}
                             className="text-2xl tracking-wide select-none"
                           >
@@ -761,7 +754,7 @@ export default function SignPDFPage() {
                         )}
 
                         {field.type === "initials" && (
-                          <span 
+                          <span
                             style={{ fontFamily: "'Alex Brush', cursive", color: signatureColor }}
                             className="text-3xl tracking-wide select-none"
                           >
@@ -773,7 +766,7 @@ export default function SignPDFPage() {
                           <div className="flex items-center gap-1.5 w-full h-full justify-center px-1">
                             <Calendar className="w-4 h-4 text-zinc-400 shrink-0" />
                             {selectedFieldId === field.id ? (
-                              <input 
+                              <input
                                 type="text"
                                 value={field.text || ""}
                                 onChange={(e) => updateFieldText(field.id, e.target.value)}
@@ -791,7 +784,7 @@ export default function SignPDFPage() {
                           <div className="flex items-center gap-1.5 w-full h-full justify-center px-1">
                             <User className="w-4 h-4 text-zinc-400 shrink-0" />
                             {selectedFieldId === field.id ? (
-                              <input 
+                              <input
                                 type="text"
                                 value={field.text || ""}
                                 onChange={(e) => updateFieldText(field.id, e.target.value)}
@@ -809,7 +802,7 @@ export default function SignPDFPage() {
                           <div className="flex items-center gap-1.5 w-full h-full justify-center px-1">
                             <FileText className="w-4 h-4 text-zinc-400 shrink-0" />
                             {selectedFieldId === field.id ? (
-                              <input 
+                              <input
                                 type="text"
                                 value={field.text || ""}
                                 onChange={(e) => updateFieldText(field.id, e.target.value)}
@@ -826,10 +819,10 @@ export default function SignPDFPage() {
                         {field.type === "stamp" && (
                           <div className="w-full h-full flex items-center justify-center overflow-hidden">
                             {stampImgUrl ? (
-                              <img 
-                                src={stampImgUrl} 
-                                alt="Company Stamp" 
-                                className="w-full h-full object-contain pointer-events-none rounded-lg" 
+                              <img
+                                src={stampImgUrl}
+                                alt="Company Stamp"
+                                className="w-full h-full object-contain pointer-events-none rounded-lg"
                               />
                             ) : (
                               <div className="text-[8px] font-black text-muted-foreground flex flex-col items-center leading-none select-none">
@@ -852,7 +845,7 @@ export default function SignPDFPage() {
           <div className="space-y-6">
             <div className="pb-3 border-b border-zinc-100 dark:border-zinc-800 flex justify-between items-center">
               <h3 className="font-extrabold text-lg text-foreground tracking-tight">Required fields</h3>
-              <button 
+              <button
                 onClick={() => setWizardStep("details")}
                 className="text-[11px] font-bold text-red-500 hover:underline"
               >
@@ -862,7 +855,7 @@ export default function SignPDFPage() {
 
             {/* Draggable Card 1: Cursive Signature */}
             <div className="space-y-4">
-              <div 
+              <div
                 onClick={() => addFieldToWorkspace("signature")}
                 className="cursor-pointer border rounded-2xl p-4 transition-all duration-200 bg-red-500/5 border-red-500/20 hover:border-red-500 flex items-center justify-between"
               >
@@ -871,11 +864,11 @@ export default function SignPDFPage() {
                   <div className="p-2 bg-red-500/10 border border-red-500/20 text-red-500 rounded-xl">
                     <PenTool className="w-5 h-5" />
                   </div>
-                  <span 
+                  <span
                     style={{ fontFamily: signatureFonts[selectedStyleIndex].fontFamily, color: signatureColor }}
                     className="text-2xl select-none"
                   >
-                    {signName || "ujjal"}
+                    {signName || ""}
                   </span>
                 </div>
                 <div className="w-6 h-6 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center text-[10px] font-black">
@@ -896,7 +889,7 @@ export default function SignPDFPage() {
                 onClick={() => addFieldToWorkspace("initials")}
                 className="border rounded-2xl p-3.5 hover:border-zinc-300 dark:hover:border-zinc-700 bg-zinc-950/5 flex flex-col items-center gap-1.5 transition-all text-center"
               >
-                <span 
+                <span
                   style={{ fontFamily: "'Alex Brush', cursive", color: signatureColor }}
                   className="text-3xl leading-none"
                 >
@@ -947,11 +940,11 @@ export default function SignPDFPage() {
 
           {/* Action button locked to the bottom */}
           <div className="pt-6 border-t border-zinc-100 dark:border-zinc-800 mt-auto">
-            <Button 
-              size="xl" 
-              variant="hero" 
-              onClick={compileSignedPdf} 
-              disabled={isProcessing || placedFields.length === 0} 
+            <Button
+              size="xl"
+              variant="hero"
+              onClick={compileSignedPdf}
+              disabled={isProcessing || placedFields.length === 0}
               className="w-full bg-red-500 hover:bg-red-600 shadow-red-500/20 gap-2 font-extrabold tracking-wide py-4.5 rounded-xl text-base"
             >
               {isProcessing ? (

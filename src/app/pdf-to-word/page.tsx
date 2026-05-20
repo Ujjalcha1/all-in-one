@@ -67,6 +67,7 @@ export default function PdfToWordPage() {
         let lastY: number | null = null;
         let lastX: number | null = null;
         let lastWidth: number | null = null;
+        let lastString = "";
 
         for (let idx = 0; idx < content.items.length; idx++) {
           const item = content.items[idx];
@@ -88,19 +89,21 @@ export default function PdfToWordPage() {
                 indent: { left: currentParagraphIndent }
               }));
               currentParagraphChildren = [];
+              lastString = "";
             }
             // 1 point = 20 twips. Convert X coordinate to docx indentation.
             currentParagraphIndent = Math.max(0, Math.round(xOffset * 20));
           } else if (isNewLine && currentParagraphChildren.length > 0) {
-            const lastChild = currentParagraphChildren[currentParagraphChildren.length - 1];
-            if (lastChild && !lastChild.root[1]?.root?.text?.endsWith(" ")) {
+            if (lastString && !lastString.endsWith(" ")) {
               currentParagraphChildren.push(new docx.TextRun({ text: " " }));
+              lastString = " ";
             }
           } else if (!isNewParagraph && !isNewLine && currentParagraphChildren.length > 0) {
             // Same line, check X distance to add spaces if there is a gap
             const expectedNextX = (lastX || 0) + ((lastWidth || 0));
             if (xOffset - expectedNextX > fontSizePts * 0.5) {
                currentParagraphChildren.push(new docx.TextRun({ text: " " }));
+               lastString = " ";
             }
           }
           
@@ -127,6 +130,7 @@ export default function PdfToWordPage() {
                 italics: isItalic
               })
             );
+            lastString = t.str;
           }
           
           lastY = t.transform[5];

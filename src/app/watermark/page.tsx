@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { PDFDocument, rgb, StandardFonts, degrees } from "pdf-lib";
 import { ResultScreen } from "@/components/result-screen";
 import { Button } from "@/components/ui/button";
+import { FileUploader } from "@/components/file-uploader";
 import {
   Loader2,
   Droplet,
@@ -135,11 +136,11 @@ export default function WatermarkPage() {
 
   const base64ToUint8Array = (base64Data: string): Uint8Array => {
     const base64Str = base64Data.split(",")[1];
-    const binaryStr = atob(base64Str);
-    const len = binaryStr.length;
+    const textData = atob(base64Str);
+    const len = textData.length;
     const bytes = new Uint8Array(len);
     for (let i = 0; i < len; i++) {
-      bytes[i] = binaryStr.charCodeAt(i);
+      bytes[i] = textData.charCodeAt(i);
     }
     return bytes;
   };
@@ -304,29 +305,8 @@ export default function WatermarkPage() {
     <div className="flex flex-col lg:flex-row w-full h-[calc(100vh-4rem)] overflow-hidden bg-[#f3f4f6] dark:bg-zinc-900">
 
       {!file ? (
-        // Standard Drag and Drop landing box if no file is selected
-        <div className="flex-1 flex flex-col items-center justify-center p-8">
-          <div className="w-full max-w-xl bg-white dark:bg-zinc-950 rounded-3xl border border-zinc-200/80 dark:border-zinc-800 shadow-2xl p-12 text-center space-y-6 animate-in fade-in zoom-in duration-200">
-            <div className="w-16 h-16 bg-red-100 dark:bg-red-950/40 text-red-500 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
-              <Droplet className="w-8 h-8 animate-pulse" />
-            </div>
-
-            <div className="space-y-2">
-              <h2 className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight">Watermark PDF Document</h2>
-              <p className="text-sm font-semibold text-muted-foreground max-w-md mx-auto">
-                Stamp visual text labels or graphic images over your PDF pages instantly. Choose placements, rotation angles, styles, and tile layouts.
-              </p>
-            </div>
-
-            <label className="block w-full cursor-pointer">
-              <div className="border-2 border-dashed border-red-200 dark:border-red-950 hover:border-red-500 dark:hover:border-red-500 bg-red-50/50 dark:bg-red-950/5 rounded-2xl p-8 transition-colors flex flex-col items-center justify-center gap-3">
-                <Sparkles className="w-8 h-8 text-red-500" />
-                <span className="text-sm font-bold text-zinc-700 dark:text-zinc-300">Choose PDF Document</span>
-                <span className="text-xs font-semibold text-muted-foreground">or drag and drop your file here</span>
-              </div>
-              <input type="file" accept="application/pdf" onChange={handleFileChange} className="hidden" />
-            </label>
-          </div>
+        <div className="flex-1 flex flex-col items-center justify-center p-8 max-w-xl mx-auto w-full">
+          <FileUploader onFilesSelected={(files) => setFile(files[0])} accept="application/pdf" />
         </div>
       ) : resultUrl ? (
         // Show download screen

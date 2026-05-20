@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { PDFDocument, degrees } from "pdf-lib";
 import { ResultScreen } from "@/components/result-screen";
 import { Button } from "@/components/ui/button";
+import { FileUploader } from "@/components/file-uploader";
 import { 
   Loader2, 
   RotateCw, 
@@ -119,29 +120,8 @@ export default function RotatePDFPage() {
     <div className="flex flex-col lg:flex-row w-full h-[calc(100vh-4rem)] overflow-hidden bg-[#f3f4f6] dark:bg-zinc-900">
       
       {!file ? (
-        // Standard Drag and Drop landing box if no file is selected
-        <div className="flex-1 flex flex-col items-center justify-center p-8">
-          <div className="w-full max-w-xl bg-white dark:bg-zinc-950 rounded-3xl border border-zinc-200/80 dark:border-zinc-800 shadow-2xl p-12 text-center space-y-6 animate-in fade-in zoom-in duration-200">
-            <div className="w-16 h-16 bg-red-100 dark:bg-red-950/40 text-red-500 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
-              <RotateCw className="w-8 h-8 animate-spin-slow text-red-500" />
-            </div>
-            
-            <div className="space-y-2">
-              <h2 className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight">Rotate PDF Pages</h2>
-              <p className="text-sm font-semibold text-muted-foreground max-w-md mx-auto">
-                Rotate multiple PDF pages clockwise or counter-clockwise at once. Click pages in the preview grid to rotate them visually before compiling.
-              </p>
-            </div>
-
-            <label className="block w-full cursor-pointer">
-              <div className="border-2 border-dashed border-red-200 dark:border-red-950 hover:border-red-500 dark:hover:border-red-500 bg-red-50/50 dark:bg-red-950/5 rounded-2xl p-8 transition-colors flex flex-col items-center justify-center gap-3">
-                <Sparkles className="w-8 h-8 text-red-500" />
-                <span className="text-sm font-bold text-zinc-700 dark:text-zinc-300">Choose PDF Document</span>
-                <span className="text-xs font-semibold text-muted-foreground">or drag and drop your file here</span>
-              </div>
-              <input type="file" accept="application/pdf" onChange={handleFileChange} className="hidden" />
-            </label>
-          </div>
+        <div className="flex-1 flex flex-col items-center justify-center p-8 max-w-xl mx-auto w-full">
+          <FileUploader onFilesSelected={(files) => setFile(files[0])} accept="application/pdf" />
         </div>
       ) : rotatedPdfUrl ? (
         // Show download screen
@@ -267,7 +247,7 @@ export default function RotatePDFPage() {
                   {/* Rotate right cards */}
                   <button
                     onClick={handleRotateRight}
-                    className="w-full flex items-center gap-4 p-3 bg-zinc-50 dark:bg-zinc-900 border rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-850 hover:shadow-md transition-all text-left"
+                    className="w-full flex items-center gap-4 p-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl hover:bg-zinc-150 dark:hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-red-500/40 hover:shadow-md transition-all text-left"
                   >
                     <div className="w-10 h-10 rounded-lg bg-red-500 text-white flex items-center justify-center shadow shadow-red-500/20">
                       <RotateCw className="w-5 h-5 stroke-[2.5]" />
@@ -281,7 +261,7 @@ export default function RotatePDFPage() {
                   {/* Rotate left cards */}
                   <button
                     onClick={handleRotateLeft}
-                    className="w-full flex items-center gap-4 p-3 bg-zinc-50 dark:bg-zinc-900 border rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-850 hover:shadow-md transition-all text-left"
+                    className="w-full flex items-center gap-4 p-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl hover:bg-zinc-150 dark:hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-red-500/40 hover:shadow-md transition-all text-left"
                   >
                     <div className="w-10 h-10 rounded-lg bg-red-500 text-white flex items-center justify-center shadow shadow-red-500/20">
                       <RotateCcw className="w-5 h-5 stroke-[2.5]" />

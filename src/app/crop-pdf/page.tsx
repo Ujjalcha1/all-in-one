@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { PDFDocument } from "pdf-lib";
 import { Button } from "@/components/ui/button";
+import { FileUploader } from "@/components/file-uploader";
 import {
   Loader2,
   ArrowRight,
@@ -361,25 +362,8 @@ export default function CropPDFPage() {
   return (
     <div className="flex flex-col lg:flex-row w-full h-[calc(100vh-4rem)] overflow-hidden bg-[#f3f4f6] dark:bg-zinc-900 select-none">
       {!file ? (
-        // File Upload Dropzone
-        <div className="flex-1 flex flex-col items-center justify-center p-8">
-          <div className="bg-white dark:bg-zinc-950 rounded-3xl border border-zinc-200/80 dark:border-zinc-800 shadow-2xl p-10 text-center space-y-6 max-w-xl w-full">
-            <div className="p-4 bg-red-500/10 dark:bg-red-500/5 rounded-2xl w-fit mx-auto text-red-500">
-              <Sparkles className="w-10 h-10" />
-            </div>
-            <h3 className="font-extrabold text-2xl text-zinc-900 dark:text-white">Crop PDF File</h3>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Crop PDF pages custom margins visually with interactive drag handles.
-            </p>
-            <label className="block w-full cursor-pointer">
-              <div className="border-2 border-dashed border-zinc-200 dark:border-zinc-800 hover:border-red-500 dark:hover:border-red-500 rounded-2xl p-10 transition-colors flex flex-col items-center justify-center gap-3 bg-zinc-50/50 dark:bg-zinc-900/10">
-                <Sparkles className="w-8 h-8 text-zinc-400" />
-                <span className="text-sm font-bold text-zinc-700 dark:text-zinc-300">Choose PDF File</span>
-                <span className="text-xs font-semibold text-muted-foreground">or drag and drop here</span>
-              </div>
-              <input type="file" accept="application/pdf" onChange={handleFileChange} className="hidden" />
-            </label>
-          </div>
+        <div className="flex-1 flex flex-col items-center justify-center p-8 max-w-xl mx-auto w-full">
+          <FileUploader onFilesSelected={(files) => setFile(files[0])} accept="application/pdf" />
         </div>
       ) : resultUrl ? (
         // Result Screen

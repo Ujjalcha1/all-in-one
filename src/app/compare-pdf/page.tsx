@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { ResultScreen } from "@/components/result-screen";
 import { Button } from "@/components/ui/button";
+import { FileUploader } from "@/components/file-uploader";
 import {
   Loader2,
   Trash2,
@@ -622,14 +623,11 @@ export default function ComparePDFPage() {
                   </button>
                 </div>
               ) : (
-                <label className="block w-full cursor-pointer">
-                  <div className="border-2 border-dashed border-zinc-200 dark:border-zinc-800 hover:border-red-500 dark:hover:border-red-500 rounded-2xl p-8 transition-colors flex flex-col items-center justify-center gap-3 bg-zinc-50/50 dark:bg-zinc-900/10">
-                    <Sparkles className="w-8 h-8 text-zinc-400" />
-                    <span className="text-sm font-bold text-zinc-700 dark:text-zinc-300">Choose Original PDF</span>
-                    <span className="text-xs font-semibold text-muted-foreground">or drag and drop here</span>
-                  </div>
-                  <input type="file" accept="application/pdf" onChange={handleFileAChange} className="hidden" />
-                </label>
+                <FileUploader
+                  onFilesSelected={(files) => setFileA(files[0])}
+                  accept="application/pdf"
+                  title="Choose Original PDF"
+                />
               )}
             </div>
 
@@ -649,14 +647,11 @@ export default function ComparePDFPage() {
                   </button>
                 </div>
               ) : (
-                <label className="block w-full cursor-pointer">
-                  <div className="border-2 border-dashed border-zinc-200 dark:border-zinc-800 hover:border-violet-500 dark:hover:border-violet-500 rounded-2xl p-8 transition-colors flex flex-col items-center justify-center gap-3 bg-zinc-50/50 dark:bg-zinc-900/10">
-                    <Sparkles className="w-8 h-8 text-zinc-400" />
-                    <span className="text-sm font-bold text-zinc-700 dark:text-zinc-300">Choose Modified PDF</span>
-                    <span className="text-xs font-semibold text-muted-foreground">or drag and drop here</span>
-                  </div>
-                  <input type="file" accept="application/pdf" onChange={handleFileBChange} className="hidden" />
-                </label>
+                <FileUploader
+                  onFilesSelected={(files) => setFileB(files[0])}
+                  accept="application/pdf"
+                  title="Choose Modified PDF"
+                />
               )}
             </div>
           </div>
