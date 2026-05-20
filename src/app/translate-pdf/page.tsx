@@ -33,7 +33,7 @@ const decodeHtmlEntities = (str: string): string => {
     .replace(/&nbsp;/g, " ");
 };
 
-// Real translation using MyMemory API with batching to minimize requests and avoid rate limits
+// Real translation using Google Translate free gtx API with batching to minimize requests
 const translateText = async (text: string, fromLang: string, toLang: string): Promise<string> => {
   const langCodes: Record<string, string> = {
     English: "en",
@@ -42,7 +42,7 @@ const translateText = async (text: string, fromLang: string, toLang: string): Pr
     German: "de",
     Italian: "it",
     Portuguese: "pt",
-    Chinese: "zh",
+    Chinese: "zh-CN",
     Japanese: "ja",
     Korean: "ko",
     Arabic: "ar",
@@ -51,7 +51,7 @@ const translateText = async (text: string, fromLang: string, toLang: string): Pr
     Dutch: "nl"
   };
 
-  const fromCode = langCodes[fromLang] || "en";
+  const fromCode = fromLang === "Auto" ? "auto" : (langCodes[fromLang] || "auto");
   const toCode = langCodes[toLang] || "es";
 
   if (fromCode === toCode) return text;
@@ -59,7 +59,7 @@ const translateText = async (text: string, fromLang: string, toLang: string): Pr
   const paragraphs = text.split("\n");
   const translatedParagraphs: string[] = [];
 
-  // Group paragraphs into batches of up to 400 characters to prevent API rate limits (429)
+  // Group paragraphs into batches of up to 1500 characters for high translation performance
   let currentBatch: string[] = [];
   let currentBatchLength = 0;
 
@@ -68,23 +68,24 @@ const translateText = async (text: string, fromLang: string, toLang: string): Pr
     
     const batchText = batch.join("\n");
     try {
-      const res = await fetch(
-        `https://api.mymemory.translated.net/get?q=${encodeURIComponent(batchText.trim())}&langpair=${fromCode}|${toCode}`
-      );
+      const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${fromCode}&tl=${toCode}&dt=t&q=${encodeURIComponent(batchText)}`;
+      const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
-        if (data.responseData && data.responseData.translatedText) {
-          const translated = decodeHtmlEntities(data.responseData.translatedText);
+        if (data && data[0]) {
+          const translated = data[0]
+            .map((item: any) => item && typeof item[0] === "string" ? item[0] : "")
+            .join("");
+          
           const parts = translated.split("\n");
-          // Ensure paragraph preservation matches
           if (parts.length === batch.length) {
             return parts;
           }
-          console.warn("MyMemory translated paragraph count mismatch, using default split");
+          return [translated];
         }
       }
     } catch (err) {
-      console.warn("MyMemory Translation API batch error:", err);
+      console.error("Google Translate batch error:", err);
     }
     
     // Fallback: translate individual paragraphs if batch fails or mismatch
@@ -95,18 +96,20 @@ const translateText = async (text: string, fromLang: string, toLang: string): Pr
         continue;
       }
       try {
-        const res = await fetch(
-          `https://api.mymemory.translated.net/get?q=${encodeURIComponent(item.trim())}&langpair=${fromCode}|${toCode}`
-        );
+        const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${fromCode}&tl=${toCode}&dt=t&q=${encodeURIComponent(item)}`;
+        const res = await fetch(url);
         if (res.ok) {
           const data = await res.json();
-          if (data.responseData && data.responseData.translatedText) {
-            fallbackResults.push(decodeHtmlEntities(data.responseData.translatedText));
+          if (data && data[0]) {
+            const translated = data[0]
+              .map((val: any) => val && typeof val[0] === "string" ? val[0] : "")
+              .join("");
+            fallbackResults.push(translated);
             continue;
           }
         }
       } catch (err) {
-        console.warn("MyMemory individual fallback error:", err);
+        console.error("Google Translate individual fallback error:", err);
       }
       fallbackResults.push(item);
     }
@@ -114,7 +117,7 @@ const translateText = async (text: string, fromLang: string, toLang: string): Pr
   };
 
   for (const para of paragraphs) {
-    if ((currentBatchLength + para.length) > 400 && currentBatch.length > 0) {
+    if ((currentBatchLength + para.length) > 1500 && currentBatch.length > 0) {
       const results = await translateBatch(currentBatch);
       translatedParagraphs.push(...results);
       currentBatch = [];
