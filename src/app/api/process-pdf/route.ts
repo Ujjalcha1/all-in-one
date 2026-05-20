@@ -39,7 +39,57 @@ export async function POST(req: NextRequest) {
       if (action === "compress") {
         const level = formData.get("level") as string;
         
-        // Run Ghostscript for compression
+        const secret = process.env.CONVERTAPI_SECRET;
+        if (secret) {
+          console.log("Using ConvertAPI for PDF compression...");
+          let preset = "ebook"; // recommended
+          if (level === "extreme") preset = "web";
+          if (level === "less") preset = "printer";
+
+          const response = await fetch("https://v2.convertapi.com/convert/pdf/to/compress", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${secret}`
+            },
+            body: JSON.stringify({
+              Parameters: [
+                {
+                  Name: "File",
+                  FileValue: {
+                    Name: file.name,
+                    Data: buffer.toString("base64")
+                  }
+                },
+                {
+                  Name: "Preset",
+                  Value: preset
+                }
+              ]
+            })
+          });
+
+          if (!response.ok) {
+            const errText = await response.text();
+            throw new Error(`ConvertAPI failed: ${errText}`);
+          }
+
+          const data = await response.json();
+          const base64Data = data.Files[0].FileData;
+          const outputBuffer = Buffer.from(base64Data, "base64");
+
+          // Clean up input file
+          await unlink(inputPath).catch(console.error);
+
+          return new NextResponse(outputBuffer, {
+            headers: {
+              "Content-Type": "application/pdf",
+              "Content-Disposition": `attachment; filename="${file.name.replace('.pdf', '')}_compressed.pdf"`
+            }
+          });
+        }
+        
+        // Run Ghostscript for compression (Fallback)
         // We try 'gswin64c' first (Windows), then 'gs' (Linux/Mac)
         let gsCommand = process.platform === 'win32' ? 'gswin64c' : 'gs';
         

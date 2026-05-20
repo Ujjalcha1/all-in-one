@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Lock, Mail, ArrowRight, Loader2, Sparkles, CheckCircle2 } from "lucide-react";
+import { Lock, Mail, ArrowRight, Loader2, CheckCircle2 } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -42,10 +42,11 @@ export default function LoginPage() {
       window.dispatchEvent(new Event("storage"));
       
       setTimeout(() => {
-        router.push("/pdf-forms");
+        router.push("/");
       }, 1500);
-    } catch (err: any) {
-      setError(err.message || "Something went wrong.");
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : "Something went wrong.";
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -82,7 +83,7 @@ export default function LoginPage() {
         {success && (
           <div className="mb-6 p-4 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-2xl text-xs font-bold flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-            <span>Success! Redirecting back to editor...</span>
+            <span>Success! Redirecting to dashboard...</span>
           </div>
         )}
 
@@ -139,7 +140,7 @@ export default function LoginPage() {
 
         <div className="mt-8 pt-6 border-t border-zinc-100 dark:border-zinc-900 text-center">
           <p className="text-xs text-muted-foreground font-semibold">
-            Don't have an account?{" "}
+            Don&apos;t have an account?{" "}
             <Link href="/signup" className="text-red-500 hover:underline">
               Create an account
             </Link>

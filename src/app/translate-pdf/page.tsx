@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ToolLayout } from "@/components/tool-layout";
 import { FileUploader } from "@/components/file-uploader";
 import { Button } from "@/components/ui/button";
 import { ResultScreen } from "@/components/result-screen";
+import { getDeviceId } from "@/lib/device";
 import { 
   Download, 
   Loader2, 
@@ -127,10 +129,13 @@ const mockTranslate = (text: string, targetLang: string) => {
 };
 
 export default function TranslatePDFPage() {
+  const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [showLimitModal, setShowLimitModal] = useState(false);
+  const [limitModalTitle, setLimitModalTitle] = useState("Limit Reached");
+  const [limitModalMessage, setLimitModalMessage] = useState<string | null>(null);
 
   // Translation configuration states
   const [fromLang, setFromLang] = useState("English");
@@ -148,7 +153,10 @@ export default function TranslatePDFPage() {
       
       // Perform initial usage limit check
       const token = localStorage.getItem("authToken");
-      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      const headers: Record<string, string> = { 
+        "Content-Type": "application/json",
+        "x-device-id": getDeviceId()
+      };
       if (token) {
         headers["Authorization"] = `Bearer ${token}`;
       }
@@ -156,6 +164,8 @@ export default function TranslatePDFPage() {
         const checkRes = await fetch(`/api/usage/check?tool=translate-pdf`, { headers });
         const checkData = await checkRes.json();
         if (!checkData.allowed) {
+          setLimitModalTitle(checkData.error ? "Device Restricted" : "Limit Reached");
+          setLimitModalMessage(checkData.error || null);
           setShowLimitModal(true);
           return;
         }
@@ -179,7 +189,10 @@ export default function TranslatePDFPage() {
     setIsProcessing(true);
 
     const token = localStorage.getItem("authToken");
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    const headers: Record<string, string> = { 
+      "Content-Type": "application/json",
+      "x-device-id": getDeviceId()
+    };
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
     }
@@ -189,6 +202,8 @@ export default function TranslatePDFPage() {
       const checkRes = await fetch(`/api/usage/check?tool=translate-pdf`, { headers });
       const checkData = await checkRes.json();
       if (!checkData.allowed) {
+        setLimitModalTitle(checkData.error ? "Device Restricted" : "Limit Reached");
+        setLimitModalMessage(checkData.error || null);
         setShowLimitModal(true);
         setIsProcessing(false);
         return;
@@ -197,11 +212,13 @@ export default function TranslatePDFPage() {
       // 2. Log tool usage
       const logRes = await fetch("/api/usage/log", {
         method: "POST",
-        headers: { ...headers, "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ tool: "translate-pdf" })
       });
       const logData = await logRes.json();
       if (!logData.success && !token) {
+        setLimitModalTitle(logData.error ? "Device Restricted" : "Limit Reached");
+        setLimitModalMessage(logData.error || null);
         setShowLimitModal(true);
         setIsProcessing(false);
         return;
@@ -444,6 +461,7 @@ export default function TranslatePDFPage() {
           downloadUrl={resultUrl!}
           downloadFileName={`${file.name.replace(".pdf", "")}_translated.pdf`}
           downloadText="Download translated PDF"
+          alreadyLogged={true}
           onStartOver={() => {
             setFile(null);
             setResultUrl(null);
@@ -458,26 +476,47 @@ export default function TranslatePDFPage() {
               <Sparkles className="w-8 h-8 animate-pulse" />
             </div>
             <h3 className="text-2xl font-black text-zinc-900 dark:text-white mb-2">
-              Limit Reached
+              {limitModalTitle}
             </h3>
             <p className="text-sm text-muted-foreground leading-relaxed mb-6 font-semibold">
-              You have already processed a PDF translation as an anonymous user. Please log in or sign up for free to get <span className="text-red-500 font-bold">unlimited usage</span>!
+              {limitModalMessage || (
+                <>
+                  You have already processed a PDF translation as an anonymous user. Please log in or sign up for free to get <span className="text-red-500 font-bold">unlimited usage</span>!
+                </>
+              )}
             </p>
             
             <div className="flex flex-col gap-3">
-              <Link
-                href="/login"
-                className="w-full h-12 bg-red-500 hover:bg-red-600 text-white rounded-2xl flex items-center justify-center gap-2 font-black shadow-lg shadow-red-500/20 transition-colors"
-              >
-                Sign In
-                <ArrowRight className="w-4.5 h-4.5" />
-              </Link>
-              <Link
-                href="/signup"
-                className="w-full h-12 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-900 dark:text-white rounded-2xl flex items-center justify-center font-bold transition-colors"
-              >
-                Create Free Account
-              </Link>
+              {limitModalTitle === "Device Restricted" ? (
+                <button
+                  onClick={() => {
+                    localStorage.removeItem("authToken");
+                    window.dispatchEvent(new Event("storage"));
+                    setShowLimitModal(false);
+                    router.push("/login");
+                  }}
+                  className="w-full h-12 bg-red-500 hover:bg-red-600 text-white rounded-2xl flex items-center justify-center gap-2 font-black shadow-lg shadow-red-500/20 transition-colors cursor-pointer"
+                >
+                  Sign Out / Switch Account
+                  <ArrowRight className="w-4.5 h-4.5" />
+                </button>
+              ) : (
+                <>
+                  <Link
+                    href="/login"
+                    className="w-full h-12 bg-red-500 hover:bg-red-600 text-white rounded-2xl flex items-center justify-center gap-2 font-black shadow-lg shadow-red-500/20 transition-colors"
+                  >
+                    Sign In
+                    <ArrowRight className="w-4.5 h-4.5" />
+                  </Link>
+                  <Link
+                    href="/signup"
+                    className="w-full h-12 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-900 dark:text-white rounded-2xl flex items-center justify-center font-bold transition-colors"
+                  >
+                    Create Free Account
+                  </Link>
+                </>
+              )}
               <button
                 onClick={() => setShowLimitModal(false)}
                 className="text-xs text-muted-foreground hover:text-foreground font-semibold mt-2 transition-colors cursor-pointer"

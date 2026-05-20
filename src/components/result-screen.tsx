@@ -5,6 +5,8 @@ import { Download, ArrowLeft, Cloud, Link2, Box, Trash2, Layers, SplitSquareHori
 import React from "react";
 import Link from "next/link";
 
+import { getDeviceId } from "@/lib/device";
+
 interface ResultScreenProps {
   title: string;
   downloadUrl: string;
@@ -12,6 +14,7 @@ interface ResultScreenProps {
   downloadText?: string;
   onStartOver: () => void;
   children?: React.ReactNode;
+  alreadyLogged?: boolean;
 }
 
 export function ResultScreen({
@@ -20,8 +23,37 @@ export function ResultScreen({
   downloadFileName,
   downloadText = "Download PDF",
   onStartOver,
-  children
+  children,
+  alreadyLogged = false
 }: ResultScreenProps) {
+  React.useEffect(() => {
+    if (alreadyLogged) return;
+
+    // Log tool usage automatically
+    const tool = window.location.pathname.replace(/^\//, "") || "pdf-tool";
+    const token = localStorage.getItem("authToken");
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      "x-device-id": getDeviceId()
+    };
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
+    fetch("/api/usage/log", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ tool })
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        console.log("Auto-logged usage successfully:", data);
+      })
+      .catch((err) => {
+        console.warn("Failed to auto-log usage:", err);
+      });
+  }, [alreadyLogged]);
+
   return (
     <div className="flex flex-col items-center max-w-4xl mx-auto w-full py-8 relative">
       <h2 className="text-[32px] font-black mb-8 text-center tracking-tight text-foreground">{title}</h2>
