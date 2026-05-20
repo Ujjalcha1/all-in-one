@@ -20,7 +20,20 @@ import {
   Trash2
 } from "lucide-react";
 
-// Real translation using MyMemory API with chunking for large text segments
+// Decodes common HTML entities returned by translation APIs
+const decodeHtmlEntities = (str: string): string => {
+  return str
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&#10;/g, "\n")
+    .replace(/&#9;/g, "\t")
+    .replace(/&nbsp;/g, " ");
+};
+
+// Real translation using MyMemory API with batching to minimize requests and avoid rate limits
 const translateText = async (text: string, fromLang: string, toLang: string): Promise<string> => {
   const langCodes: Record<string, string> = {
     English: "en",
@@ -43,50 +56,77 @@ const translateText = async (text: string, fromLang: string, toLang: string): Pr
 
   if (fromCode === toCode) return text;
 
-  // Split text into paragraphs to respect MyMemory length limit
   const paragraphs = text.split("\n");
   const translatedParagraphs: string[] = [];
 
-  for (const para of paragraphs) {
-    if (!para.trim()) {
-      translatedParagraphs.push("");
-      continue;
-    }
+  // Group paragraphs into batches of up to 400 characters to prevent API rate limits (429)
+  let currentBatch: string[] = [];
+  let currentBatchLength = 0;
 
-    // Split paragraphs into sentence chunks under 400 characters
-    const chunks: string[] = [];
-    let currentChunk = "";
-    const sentences = para.match(/[^.!?]+[.!?]+(\s|$)|[^.!?]+$/g) || [para];
-
-    for (const sentence of sentences) {
-      if ((currentChunk + sentence).length > 400) {
-        if (currentChunk) chunks.push(currentChunk);
-        currentChunk = sentence;
-      } else {
-        currentChunk += sentence;
+  const translateBatch = async (batch: string[]): Promise<string[]> => {
+    if (batch.length === 0) return [];
+    
+    const batchText = batch.join("\n");
+    try {
+      const res = await fetch(
+        `https://api.mymemory.translated.net/get?q=${encodeURIComponent(batchText.trim())}&langpair=${fromCode}|${toCode}`
+      );
+      if (res.ok) {
+        const data = await res.json();
+        if (data.responseData && data.responseData.translatedText) {
+          const translated = decodeHtmlEntities(data.responseData.translatedText);
+          const parts = translated.split("\n");
+          // Ensure paragraph preservation matches
+          if (parts.length === batch.length) {
+            return parts;
+          }
+          console.warn("MyMemory translated paragraph count mismatch, using default split");
+        }
       }
+    } catch (err) {
+      console.warn("MyMemory Translation API batch error:", err);
     }
-    if (currentChunk) chunks.push(currentChunk);
-
-    const translatedChunks: string[] = [];
-    for (const chunk of chunks) {
+    
+    // Fallback: translate individual paragraphs if batch fails or mismatch
+    const fallbackResults: string[] = [];
+    for (const item of batch) {
+      if (!item.trim()) {
+        fallbackResults.push("");
+        continue;
+      }
       try {
         const res = await fetch(
-          `https://api.mymemory.translated.net/get?q=${encodeURIComponent(chunk.trim())}&langpair=${fromCode}|${toCode}`
+          `https://api.mymemory.translated.net/get?q=${encodeURIComponent(item.trim())}&langpair=${fromCode}|${toCode}`
         );
         if (res.ok) {
           const data = await res.json();
           if (data.responseData && data.responseData.translatedText) {
-            translatedChunks.push(data.responseData.translatedText);
+            fallbackResults.push(decodeHtmlEntities(data.responseData.translatedText));
             continue;
           }
         }
       } catch (err) {
-        console.warn("MyMemory Translation API error, falling back:", err);
+        console.warn("MyMemory individual fallback error:", err);
       }
-      translatedChunks.push(chunk);
+      fallbackResults.push(item);
     }
-    translatedParagraphs.push(translatedChunks.join(" "));
+    return fallbackResults;
+  };
+
+  for (const para of paragraphs) {
+    if ((currentBatchLength + para.length) > 400 && currentBatch.length > 0) {
+      const results = await translateBatch(currentBatch);
+      translatedParagraphs.push(...results);
+      currentBatch = [];
+      currentBatchLength = 0;
+    }
+    currentBatch.push(para);
+    currentBatchLength += para.length;
+  }
+
+  if (currentBatch.length > 0) {
+    const results = await translateBatch(currentBatch);
+    translatedParagraphs.push(...results);
   }
 
   return translatedParagraphs.join("\n");
@@ -194,70 +234,103 @@ export default function TranslatePDFPage() {
       const ab = await file.arrayBuffer();
       const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(ab) }).promise;
       
-      let textLines: string[] = [];
+      let paragraphsList: string[] = [];
       for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i);
         const content = await page.getTextContent();
-        const pageText = content.items.map((item: any) => item.str).join(" ");
-        textLines.push(pageText);
+        
+        // Sort items in reading order: top-to-bottom (Y descending), then left-to-right (X ascending)
+        const sortedItems = [...content.items] as any[];
+        sortedItems.sort((a, b) => {
+          const yA = a.transform ? a.transform[5] : 0;
+          const yB = b.transform ? b.transform[5] : 0;
+          if (Math.abs(yA - yB) > 5) {
+            return yB - yA;
+          }
+          const xA = a.transform ? a.transform[4] : 0;
+          const xB = b.transform ? b.transform[4] : 0;
+          return xA - xB;
+        });
+
+        let currentPara = "";
+        let lastY: number | null = null;
+        
+        for (const item of sortedItems) {
+          const t = item as any;
+          if (t.str === undefined) continue;
+          
+          const fontSizePts = Math.abs(t.transform[3]) || 12; 
+          const yDiff = lastY !== null ? Math.abs(t.transform[5] - lastY) : 0;
+          const isNewLine = yDiff > 5;
+          const isNewParagraph = lastY === null || yDiff > fontSizePts * 1.8;
+          
+          if (isNewParagraph && currentPara.trim() !== "") {
+            paragraphsList.push(currentPara.trim());
+            currentPara = "";
+          } else if (isNewLine && currentPara.trim() !== "" && !currentPara.endsWith(" ")) {
+            currentPara += " ";
+          }
+          
+          currentPara += t.str;
+          lastY = t.transform[5];
+        }
+        
+        if (currentPara.trim() !== "") {
+          paragraphsList.push(currentPara.trim());
+        }
       }
 
       // 4. Translate text contents
-      const translatedText = await translateText(textLines.join("\n"), fromLang, toLang);
+      const translatedText = await translateText(paragraphsList.join("\n"), fromLang, toLang);
 
-      // 5. Generate target PDF containing translated text using pdf-lib
-      const { PDFDocument, rgb, StandardFonts } = await import("pdf-lib");
-      const outPdf = await PDFDocument.create();
-      const font = await outPdf.embedFont(StandardFonts.Helvetica);
-      
-      const lines = translatedText.split("\n");
-      let page = outPdf.addPage([595, 842]); // A4 Size
-      let y = 800;
+      // 5. Generate target PDF containing translated text by packaging it in a docx and converting it on the server
+      const docx = await import("docx");
+      const paragraphs = translatedText.split("\n").map(line => {
+        return new docx.Paragraph({
+          children: [
+            new docx.TextRun({
+              text: line,
+              size: 22, // 11pt
+              font: "Arial"
+            })
+          ],
+          spacing: { after: 120 }
+        });
+      });
 
-      for (const line of lines) {
-        // Simple line wrapping
-        const words = line.split(" ");
-        let currentLine = "";
-        
-        for (const word of words) {
-          if ((currentLine + " " + word).length > 80) {
-            if (y < 50) {
-              page = outPdf.addPage([595, 842]);
-              y = 800;
+      const doc = new docx.Document({
+        sections: [{ 
+          properties: {
+            page: {
+              margin: {
+                top: 1440,
+                bottom: 1440,
+                left: 1440,
+                right: 1440
+              }
             }
-            page.drawText(currentLine.trim(), {
-              x: 50,
-              y,
-              size: 10,
-              font,
-              color: rgb(0.1, 0.1, 0.1),
-            });
-            y -= 15;
-            currentLine = word;
-          } else {
-            currentLine += (currentLine ? " " : "") + word;
-          }
-        }
+          },
+          children: paragraphs
+        }]
+      });
+      const docxBuffer = await docx.Packer.toBuffer(doc);
+      const docxBlob = new Blob([docxBuffer as unknown as BlobPart], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
+      
+      const formData = new FormData();
+      formData.append("file", docxBlob, `${file.name.replace(".pdf", "")}_translated.docx`);
 
-        if (currentLine) {
-          if (y < 50) {
-            page = outPdf.addPage([595, 842]);
-            y = 800;
-          }
-          page.drawText(currentLine.trim(), {
-            x: 50,
-            y,
-            size: 10,
-            font,
-            color: rgb(0.1, 0.1, 0.1),
-          });
-          y -= 18; // paragraph break
-        }
+      const convertRes = await fetch("/api/word-to-pdf", {
+        method: "POST",
+        body: formData
+      });
+
+      if (!convertRes.ok) {
+        const errData = await convertRes.json().catch(() => ({}));
+        throw new Error(errData.error || "Failed to convert translated document to PDF on the server.");
       }
 
-      const outBytes = await outPdf.save();
-      const blob = new Blob([outBytes.buffer as ArrayBuffer], { type: "application/pdf" });
-      setResultUrl(URL.createObjectURL(blob));
+      const pdfBlob = await convertRes.blob();
+      setResultUrl(URL.createObjectURL(pdfBlob));
     } catch (err) {
       console.error("Translation processing error:", err);
       alert("Error translating PDF file. Please try again.");
