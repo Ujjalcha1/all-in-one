@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDb } from "@/lib/mongodb";
+import { connectToDatabase } from "@/lib/mongoose";
 import { saveDeviceData } from "@/lib/device-db";
+import { User } from "@/models/User";
+import { Log } from "@/models/Log";
 
 export async function POST(req: NextRequest) {
   try {
@@ -18,18 +20,19 @@ export async function POST(req: NextRequest) {
     } catch {}
 
     const isLoggedIn = authHeader && authHeader.startsWith("Bearer mock-jwt-token-for-");
-    const db = await getDb();
+    
+    await connectToDatabase();
 
     let email: string | null = null;
-    if (isLoggedIn) {
+    if (isLoggedIn && authHeader) {
       email = authHeader.replace("Bearer mock-jwt-token-for-", "").trim().toLowerCase();
     }
 
     // Save device data in the database
-    await saveDeviceData(db, deviceId, email, userAgent, ip);
+    await saveDeviceData(deviceId, email, userAgent, ip);
 
     if (isLoggedIn && email) {
-      const user = await db.collection("users").findOne({ email });
+      const user = await User.findOne({ email });
 
       if (!user) {
         return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -37,7 +40,7 @@ export async function POST(req: NextRequest) {
 
       // If user doesn't have a device bound yet, bind this one
       if (!user.deviceId) {
-        await db.collection("users").updateOne({ email }, { $set: { deviceId } });
+        await User.updateOne({ email }, { $set: { deviceId } });
       } else if (user.deviceId !== deviceId) {
         return NextResponse.json({ 
           success: false, 
@@ -46,7 +49,7 @@ export async function POST(req: NextRequest) {
       }
     } else {
       // Not logged in: Count logs across ALL tools by this deviceId or IP
-      const count = await db.collection("logs").countDocuments({
+      const count = await Log.countDocuments({
         $or: [
           { deviceId },
           { ip }
@@ -61,14 +64,14 @@ export async function POST(req: NextRequest) {
     }
 
     // Insert log
-    await db.collection("logs").insertOne({
+    await Log.create({
       ip,
       deviceId,
-      timestamp: new Date(),
-      tool
+      tool,
+      timestamp: new Date()
     });
 
-    const totalCount = await db.collection("logs").countDocuments({
+    const totalCount = await Log.countDocuments({
       $or: [
         { deviceId },
         { ip }
@@ -81,4 +84,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
-

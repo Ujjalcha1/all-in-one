@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDb } from "@/lib/mongodb";
+import { connectToDatabase } from "@/lib/mongoose";
+import { User } from "@/models/User";
 
 export async function POST(req: NextRequest) {
   try {
@@ -9,9 +10,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Email and password are required" }, { status: 400 });
     }
 
-    const db = await getDb();
+    await connectToDatabase();
 
-    const user = await db.collection("users").findOne({
+    const user = await User.findOne({
       email: email.toLowerCase(),
       passwordHash: password
     });

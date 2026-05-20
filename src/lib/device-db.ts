@@ -1,15 +1,4 @@
-import { Db } from "mongodb";
-
-export interface DeviceData {
-  deviceId: string;
-  email: string | null;
-  userAgent: string;
-  ip: string;
-  os: string;
-  browser: string;
-  lastActive: Date;
-  createdAt?: Date;
-}
+import { Device } from "@/models/Device";
 
 export function parseUserAgent(ua: string) {
   let os = "Unknown OS";
@@ -37,7 +26,6 @@ export function parseUserAgent(ua: string) {
 }
 
 export async function saveDeviceData(
-  db: Db,
   deviceId: string,
   email: string | null,
   userAgent: string,
@@ -45,7 +33,7 @@ export async function saveDeviceData(
 ) {
   const { os, browser } = parseUserAgent(userAgent);
   
-  await db.collection("devices").updateOne(
+  await Device.findOneAndUpdate(
     { deviceId },
     {
       $set: {
@@ -60,6 +48,6 @@ export async function saveDeviceData(
         createdAt: new Date()
       }
     },
-    { upsert: true }
+    { upsert: true, new: true }
   );
 }
