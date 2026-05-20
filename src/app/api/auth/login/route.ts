@@ -21,6 +21,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
     }
 
+    const deviceId = req.headers.get("x-device-id") || req.headers.get("x-forwarded-for")?.split(",")[0] || "127.0.0.1";
+    if (deviceId) {
+      await User.updateOne({ _id: user._id }, { $set: { deviceId } });
+    }
+
     return NextResponse.json({ 
       success: true, 
       token: `mock-jwt-token-for-${user.email}`,

@@ -17,10 +17,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "User already exists" }, { status: 409 });
     }
 
+    const deviceId = req.headers.get("x-device-id") || req.headers.get("x-forwarded-for")?.split(",")[0] || "127.0.0.1";
+
     // Save user
     const newUser = await User.create({
       email: email.toLowerCase(),
       passwordHash: password, // Simulated hash
+      deviceId,
     });
 
     return NextResponse.json({ 

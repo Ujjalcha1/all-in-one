@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Lock, Mail, ArrowRight, Loader2, CheckCircle2 } from "lucide-react";
+import { getDeviceId } from "@/lib/device";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -25,7 +26,10 @@ export default function LoginPage() {
     try {
       const res = await fetch("/api/auth/login", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "x-device-id": getDeviceId()
+        },
         body: JSON.stringify({ email, password }),
       });
 
